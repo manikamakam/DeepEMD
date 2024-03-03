@@ -2,6 +2,8 @@ deepemd_pretrain_model/
 deepemd_trained_model/
 deepemd_pretrain_model.tar
 deepemd_trained_model.tar
+checkpoint/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
