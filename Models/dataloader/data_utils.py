@@ -1,5 +1,13 @@
 def set_up_datasets(args):
-    if args.dataset == 'miniimagenet':
+    if args.dataset == 'custom':
+        args.num_class = 14806
+        if args.deepemd == 'fcn':
+            from Models.dataloader.custom.fcn.custom import Custom as Dataset
+        # elif args.deepemd == 'sampling':
+        #     from Models.dataloader.miniimagenet.sampling.mini_imagenet import MiniImageNet as Dataset
+        # elif args.deepemd == 'grid':
+        #     from Models.dataloader.miniimagenet.grid.mini_imagenet import MiniImageNet as Dataset
+    elif args.dataset == 'miniimagenet':
         args.num_class = 64
         if args.deepemd == 'fcn':
             from Models.dataloader.miniimagenet.fcn.mini_imagenet import MiniImageNet as Dataset

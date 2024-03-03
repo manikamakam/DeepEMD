@@ -12,11 +12,11 @@ import time
 
 PRETRAIN_DIR='deepemd_pretrain_model/'
 # DATA_DIR='/home/zhangchi/dataset'
-DATA_DIR='your/default/dataset/dir'
+DATA_DIR='../data'
 
 parser = argparse.ArgumentParser()
 #about dataset and training
-parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
+parser.add_argument('-dataset', type=str, default='custom', choices=['miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs', 'custom'])
 parser.add_argument('-data_dir', type=str, default=DATA_DIR,help='dir of datasets')
 parser.add_argument('-set',type=str,default='val',choices=['test','val'],help='the set used for validation')# set used for validation
 #about training
@@ -75,7 +75,7 @@ num_gpu = set_gpu(args)
 Dataset=set_up_datasets(args)
 
 # model
-args.pretrain_dir=osp.join(args.pretrain_dir,'%s/resnet12/max_acc.pth'%(args.dataset))
+args.pretrain_dir=osp.join(args.pretrain_dir,'miniimagenet/resnet12/max_acc.pth')
 model = DeepEMD(args)
 model = load_model(model, args.pretrain_dir)
 model = nn.DataParallel(model, list(range(num_gpu)))

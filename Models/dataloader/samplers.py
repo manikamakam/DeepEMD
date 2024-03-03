@@ -11,7 +11,8 @@ class CategoriesSampler():
 
         label = np.array(label)#all data label
         self.m_ind = []#the data index of each class
-        for i in range(max(label) + 1):
+        # print(type(label))
+        for i in range(int(max(label)) + 1):
             ind = np.argwhere(label == i).reshape(-1)# all data index of this class
             ind = torch.from_numpy(ind)
             self.m_ind.append(ind)
