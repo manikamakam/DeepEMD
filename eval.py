@@ -9,9 +9,9 @@ from Models.models.Network import DeepEMD
 from Models.utils import *
 from Models.dataloader.data_utils import *
 
-DATA_DIR='your/default/dataset/dir'
+DATA_DIR='../data'
 # DATA_DIR='/home/zhangchi/dataset'
-MODEL_DIR='deepemd_trained_model/miniimagenet/fcn/max_acc.pth'
+MODEL_DIR='checkpoint/pre_train/custom/2-0.1000-30-0.20/max_acc.pth'
 
 
 
@@ -19,8 +19,8 @@ parser = argparse.ArgumentParser()
 # about task
 parser.add_argument('-way', type=int, default=5)
 parser.add_argument('-shot', type=int, default=1)
-parser.add_argument('-query', type=int, default=15)  # number of query image per class
-parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
+parser.add_argument('-query', type=int, default=1)  # number of query image per class
+parser.add_argument('-dataset', type=str, default='miniimagenet', choices=['custom', 'miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
 parser.add_argument('-set', type=str, default='test', choices=['train','val', 'test'])
 # about model
 parser.add_argument('-temperature', type=float, default=12.5)
@@ -42,7 +42,7 @@ parser.add_argument('-sfc_wd', type=float, default=0, help='weight decay for SFC
 parser.add_argument('-sfc_update_step', type=float, default=100)
 parser.add_argument('-sfc_bs', type=int, default=4)
 # others
-parser.add_argument('-test_episode', type=int, default=5000)
+parser.add_argument('-test_episode', type=int, default=52)
 parser.add_argument('-gpu', default='0,1')
 parser.add_argument('-data_dir', type=str, default=DATA_DIR)
 parser.add_argument('-model_dir', type=str, default=MODEL_DIR)
@@ -69,7 +69,7 @@ model.eval()
 
 # test dataset
 test_set = Dataset(args.set, args)
-sampler = CategoriesSampler(test_set.label, args.test_episode, args.way, args.shot + args.query)
+sampler = CategoriesSampler(test_set.label, args.test_episode, 2*args.way, args.shot + args.query)
 loader = DataLoader(test_set, batch_sampler=sampler, num_workers=8, pin_memory=True)
 tqdm_gen = tqdm.tqdm(loader)
 

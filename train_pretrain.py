@@ -13,7 +13,7 @@ from Models.models.Network import DeepEMD
 from Models.utils import *
 from Models.dataloader.data_utils import *
 import warnings 
-warnings.simplefilter(action='ignore', category=FutureWarning)
+# warnings.simplefilter(action='ignore', category=FutureWarning)
 
 DATA_DIR='../data'
 # DATA_DIR='/home/zhangchi/dataset'
@@ -23,11 +23,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dataset', type=str, default='custom', choices=['custom', 'miniimagenet', 'cub','tieredimagenet','fc100','tieredimagenet_yao','cifar_fs'])
 parser.add_argument('-data_dir', type=str, default=DATA_DIR)
 # about pre-training
-parser.add_argument('-max_epoch', type=int, default=120)
+parser.add_argument('-max_epoch', type=int, default=100)
 parser.add_argument('-lr', type=float, default=0.1)
 parser.add_argument('-step_size', type=int, default=30)
 parser.add_argument('-gamma', type=float, default=0.2)
-parser.add_argument('-bs', type=int, default=1)
+parser.add_argument('-bs', type=int, default=2)
 # about validation
 parser.add_argument('-set', type=str, default='val', choices=['val', 'test'], help='the set for validation')
 parser.add_argument('-way', type=int, default=5)
@@ -35,7 +35,7 @@ parser.add_argument('-shot', type=int, default=1)
 parser.add_argument('-query', type=int, default=1)
 parser.add_argument('-temperature', type=float, default=12.5)
 parser.add_argument('-metric', type=str, default='cosine')
-parser.add_argument('-num_episode', type=int, default=2962)
+parser.add_argument('-num_episode', type=int, default=50)
 parser.add_argument('-save_all', action='store_true', help='save models on each epoch')
 parser.add_argument('-random_val_task', action='store_true', help='random samples tasks for validation in each epoch')
 # about deepemd setting
@@ -68,12 +68,12 @@ Dataset=set_up_datasets(args)
 trainset = Dataset('train', args)
 train_loader = DataLoader(dataset=trainset, batch_size=args.bs, shuffle=True, num_workers=8, pin_memory=True)
 
-# valset = Dataset(args.set, args)
-# val_sampler = CategoriesSampler(valset.label, args.num_episode, args.way, args.shot + args.query)
-# val_loader = DataLoader(dataset=valset, batch_sampler=val_sampler, num_workers=8, pin_memory=True)
-# if not args.random_val_task:
-#     print('fix val set for all epochs')
-#     val_loader = [x for x in val_loader]
+valset = Dataset(args.set, args)
+val_sampler = CategoriesSampler(valset.label, args.num_episode, 2*args.way, args.shot + args.query)
+val_loader = DataLoader(dataset=valset, batch_sampler=val_sampler, num_workers=4, pin_memory=True)
+if not args.random_val_task:
+    print('fix val set for all epochs')
+    val_loader = [x for x in val_loader]
 print('save all checkpoint models:', (args.save_all is True))
 
 model = DeepEMD(args, mode='pre_train')
@@ -138,60 +138,66 @@ for epoch in range(1, args.max_epoch + 1):
 
     tl = tl.item()
     ta = ta.item()
-
-    # model = model.eval()
-    # model.module.mode = 'meta'
-    # vl = Averager()
-    # va = Averager()
-    #use deepemd fcn for validation
-    # with torch.no_grad():
-    #     tqdm_gen = tqdm.tqdm(val_loader)
-    #     for i, batch in enumerate(tqdm_gen, 1):
-
-    #         data, _ = [_.cuda() for _ in batch]
-    #         k = args.way * args.shot
-    #         #encoder data by encoder
-    #         model.module.mode = 'encoder'
-    #         data = model(data)
-    #         data_shot, data_query = data[:k], data[k:]
-    #         #episode learning
-    #         model.module.mode = 'meta'
-    #         if args.shot > 1:#k-shot case
-    #             data_shot = model.module.get_sfc(data_shot)
-    #         logits = model((data_shot.unsqueeze(0).repeat(num_gpu, 1, 1, 1, 1), data_query))#repeat for multi-gpu processing
-    #         loss = F.cross_entropy(logits, label)
-    #         acc = count_acc(logits, label)
-    #         vl.add(loss.item())
-    #         va.add(acc)
-
-    #     vl = vl.item()
-    #     va = va.item()
-    # writer.add_scalar('data/val_loss', float(vl), epoch)
-    # writer.add_scalar('data/val_acc', float(va), epoch)
-    # tqdm_gen.set_description('epo {}, val, loss={:.4f} acc={:.4f}'.format(epoch, vl, va))
-
-    # if va >= trlog['max_acc']:
-    #     print('A better model is found!!')
-    #     trlog['max_acc'] = va
-    #     trlog['max_acc_epoch'] = epoch
-    #     save_model('max_acc')
-    #     torch.save(optimizer.state_dict(), osp.join(args.save_path, 'optimizer_best.pth'))
-
-    trlog['train_loss'].append(tl)
-    trlog['train_acc'].append(ta)
-    # trlog['val_loss'].append(vl)
-    # trlog['val_acc'].append(va)
-
-    result_list.append(
-        'epoch:%03d,training_loss:%.5f,training_acc:%.5f,val_loss:%.5f,val_acc:%.5f' % (epoch, tl, ta, vl, va))
-    torch.save(trlog, osp.join(args.save_path, 'trlog'))
     if args.save_all:
         save_model('epoch-%d' % epoch)
         torch.save(optimizer.state_dict(), osp.join(args.save_path, 'optimizer_latest.pth'))
-    print('best epoch {}, best val acc={:.4f}'.format(trlog['max_acc_epoch'], trlog['max_acc']))
-    print('This epoch takes %d seconds' % (time.time() - start_time),
-          '\nstill need around %.2f hour to finish' % ((time.time() - start_time) * (args.max_epoch - epoch) / 3600))
-    lr_scheduler.step()
+
+    model = model.eval()
+    model.module.mode = 'meta'
+    vl = Averager()
+    va = Averager()
+    ##use deepemd fcn for validation
+    if epoch ==0 or epoch%2==0:
+        with torch.no_grad():
+            tqdm_gen = tqdm.tqdm(val_loader)
+            for i, batch in enumerate(tqdm_gen, 1):
+
+                data, _ = [_.cuda() for _ in batch]
+                # print(len(data))
+                k = args.way * args.shot
+                #encoder data by encoder
+                model.module.mode = 'encoder'
+                data = model(data)
+                data_shot, data_query = data[:k], data[k:]
+                #episode learning
+                model.module.mode = 'meta'
+                if args.shot > 1:#k-shot case
+                    data_shot = model.module.get_sfc(data_shot)
+                logits = model((data_shot.unsqueeze(0).repeat(num_gpu, 1, 1, 1, 1), data_query))#repeat for multi-gpu processing
+                # print(logits.shape)
+                # print(label.shape)
+                loss = F.cross_entropy(logits, label)
+                acc = count_acc(logits, label)
+                vl.add(loss.item())
+                va.add(acc)
+
+            vl = vl.item()
+            va = va.item()
+        writer.add_scalar('data/val_loss', float(vl), epoch)
+        writer.add_scalar('data/val_acc', float(va), epoch)
+        tqdm_gen.set_description('epo {}, val, loss={:.4f} acc={:.4f}'.format(epoch, vl, va))
+
+        if va >= trlog['max_acc']:
+            print('A better model is found!!')
+            trlog['max_acc'] = va
+            trlog['max_acc_epoch'] = epoch
+            save_model('max_acc')
+            torch.save(optimizer.state_dict(), osp.join(args.save_path, 'optimizer_best.pth'))
+
+        trlog['val_loss'].append(vl)
+        trlog['val_acc'].append(va)
+
+        trlog['train_loss'].append(tl)
+        trlog['train_acc'].append(ta)
+        
+        result_list.append(
+            'epoch:%03d,training_loss:%.5f,training_acc:%.5f,val_loss:%.5f,val_acc:%.5f' % (epoch, tl, ta, vl, va))
+        torch.save(trlog, osp.join(args.save_path, 'trlog'))
+
+        print('best epoch {}, best val acc={:.4f}'.format(trlog['max_acc_epoch'], trlog['max_acc']))
+        print('This epoch takes %d seconds' % (time.time() - start_time),
+            '\nstill need around %.2f hour to finish' % ((time.time() - start_time) * (args.max_epoch - epoch) / 3600))
+        lr_scheduler.step()
 
 writer.close()
 result_list.append('Val Best Epoch {},\nbest val Acc {:.4f}'.format(trlog['max_acc_epoch'], trlog['max_acc'], ))

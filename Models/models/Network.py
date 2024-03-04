@@ -60,6 +60,8 @@ class DeepEMD(nn.Module):
     def emd_forward_1shot(self, proto, query):
         proto = proto.squeeze(0)
 
+        # print(f"query: {query}")
+        # print(f"proto: {proto}")
         weight_1 = self.get_weight_vector(query, proto)
         weight_2 = self.get_weight_vector(proto, query)
 

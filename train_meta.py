@@ -92,11 +92,11 @@ ensure_path(args.save_path)
 
 
 trainset = Dataset('train', args)
-train_sampler = CategoriesSampler(trainset.label, args.val_frequency*args.bs, args.way, args.shot + args.query)
+train_sampler = CategoriesSampler(trainset.label, args.val_frequency*args.bs, 2*args.way, args.shot + args.query)
 train_loader = DataLoader(dataset=trainset, batch_sampler=train_sampler, num_workers=8, pin_memory=True)
 
 valset = Dataset(args.set, args)
-val_sampler = CategoriesSampler(valset.label, args.val_episode, args.way, args.shot + args.query)
+val_sampler = CategoriesSampler(valset.label, args.val_episode, 2*args.way, args.shot + args.query)
 val_loader = DataLoader(dataset=valset, batch_sampler=val_sampler, num_workers=8, pin_memory=True)
 
 if not args.random_val_task:
