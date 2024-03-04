@@ -6,9 +6,8 @@ import os
 import numpy as np
 
 class Custom(Dataset):
-
-    def __init__(self, setname, args):
-
+    def __init__(self, setname, args): 
+        # to load data for training which is the provided images/
         if setname == 'train':
             IMAGE_PATH = os.path.join(args.data_dir, 'images')
             data = []
@@ -16,6 +15,7 @@ class Custom(Dataset):
             list = os.listdir(IMAGE_PATH)
             for dat in list:
                 path = osp.join(IMAGE_PATH, dat)
+                # label is the unique filename of each image
                 lb = dat.split(".")
                 data.append(path)
                 label.append(lb[0])
@@ -24,13 +24,17 @@ class Custom(Dataset):
             self.label = label  # label of all data
             self.num_class = len(set(label))
 
+            # image size of provided images were 500 x 500
             image_size = 500
+            # Performing random transforms
             self.transform = transforms.Compose([
                 transforms.RandomResizedCrop(image_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                      np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
+            
+        # to load data for validation - which is the generated data 
         if setname == 'val':
             IMAGE_PATH = os.path.join(args.data_dir, 'val')
             data = []
@@ -55,6 +59,7 @@ class Custom(Dataset):
                 transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                      np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
 
+        # to load data for testing - which are the segmented patches in task 1
         if setname == 'test':
             IMAGE_PATH = os.path.join(args.data_dir, 'img_patches_filtered')
             data = []
